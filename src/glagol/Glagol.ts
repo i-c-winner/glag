@@ -12,6 +12,7 @@ const password = getRandomText(7)
 const glagolMeet = {
   peerConnection: null as RTCPeerConnection,
   Strophe,
+  listeners: {},
   conn: null as any,
   connection: function () {
     const xmpp = new Promise((resolve, reject) => {
@@ -19,7 +20,7 @@ const glagolMeet = {
     })
     xmpp.then((connection: any) => {
       this.conn = connection
-      this.conn.addHandler(this.callbackHandler)
+      this.conn.addHandler(this.callbackHandler.bind(this))
       connection.register.connect("@prosolen.net", callbackRegistry.bind(this))
 
     })
@@ -56,7 +57,26 @@ const glagolMeet = {
     const from = stanza.getAttribute('from')
     const type = stanza.getAttribute('type')
     const elems = stanza.getElementsByTagName('body')
-    console.log(from, type, elems)
+    console.log(type, elems[0])
+    if (type === 'chat') {
+      const message = Strophe.getText(elems[0])
+      if (message === 'add_track') {
+        this.peerConnection.addTransceiver('video', {'direction': 'recvonly'})
+        this.peerConnection.addTransceiver('audio', {'direction': 'recvonly'})
+        this.peerConnection.createOffer({'iceRestart': true}).then((offer: any) => {
+          this.peerConnection.setLocalDescription(offer)
+
+        })
+      } else {
+        const rtcSd = new RTCSessionDescription((JSON.parse(window.atob(message))))
+        try {
+          this.peerConnection.setRemoteDescription(rtcSd)
+          this.emit('addTrack', this.peerConnection.getRemoteStreams())
+        } catch (e) {
+          console.error(e)
+        }
+      }
+    }
     return true
   },
   setLocalDescription: function (stream: MediaStream) {
@@ -71,6 +91,22 @@ const glagolMeet = {
       this.peerConnection.addTrack(track)
     })
     this.peerConnection.createOffer().then((offer: any) => this.peerConnection.setLocalDescription(offer))
+  },
+
+  localStream: null as null | MediaStream,
+  getLocalStream: function () {
+    return this.localStream
+  },
+  on(event: string, callback: Function) {
+    if (!this.listeners[event]) {
+      this.listeners[event]=[]
+    }
+    this.listeners[event].push(callback)
+  },
+  emit(emit: string, ...args:[...any[]]) {
+    this.listeners[emit].forEach((listener : Function) =>{
+      listener(args)
+    })
   }
 }
 
