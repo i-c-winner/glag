@@ -1,22 +1,27 @@
 import Xmpp from "./Xmpp";
+
 const {Strophe}: any = require("strophe.js")
 import getRandomText from "../plugins/getRandomText";
+
 const register: any = require('strophe-plugin-register')
 import RTC from './RTC'
 
-const userId=getRandomText(5)
-const password=getRandomText(7)
+const userId = getRandomText(5)
+const password = getRandomText(7)
 
-const glagolMeet={
+const glagolMeet = {
+  peerConnection: null as RTCPeerConnection,
   Strophe,
-  connection: function() {
+  conn: null as any,
+  connection: function () {
     const xmpp = new Promise((resolve, reject) => {
       resolve(Xmpp.connection(Strophe))
     })
-  xmpp.then((connection: any)=>{
-    this.conn=connection
-    connection.register.connect("@prosolen.net", callbackRegistry.bind(this))
-  })
+    xmpp.then((connection: any) => {
+      this.conn = connection
+      connection.register.connect("@prosolen.net", callbackRegistry.bind(this))
+    })
+
     function callbackRegistry(status: number) {
       if (status === Strophe.Status.REGISTER) {
         // fill out the fields
@@ -34,20 +39,17 @@ const glagolMeet={
         console.log("Registration form not properly filled out.")
       } else if (status === Strophe.Status.REGIFAIL) {
         console.log("The Server does not support In-Band Registration")
-      } else if (status === Strophe.Status.CONNECTED){
+      } else if (status === Strophe.Status.CONNECTED) {
         console.info('connected')
       }
     }
   },
   init: function () {
-    const pc= new Promise((resolve, reject)=>{
-      resolve ( RTC.init())
-    })
-   pc.then((pc: any)=>{
-      this.peerConnection=pc
-    })
+    const pc = RTC.init()
+    this.peerConnection = pc
     return this
-  }
+  },
+
 }
 
 export default glagolMeet
