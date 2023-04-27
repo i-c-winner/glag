@@ -19,7 +19,9 @@ const glagolMeet = {
     })
     xmpp.then((connection: any) => {
       this.conn = connection
+      this.conn.addHandler(this.callbackHandler)
       connection.register.connect("@prosolen.net", callbackRegistry.bind(this))
+
     })
 
     function callbackRegistry(status: number) {
@@ -40,7 +42,7 @@ const glagolMeet = {
       } else if (status === Strophe.Status.REGIFAIL) {
         console.log("The Server does not support In-Band Registration")
       } else if (status === Strophe.Status.CONNECTED) {
-        console.info('connected')
+
       }
     }
   },
@@ -50,6 +52,26 @@ const glagolMeet = {
     return this
   },
 
+  callbackHandler(stanza: any) {
+    const from = stanza.getAttribute('from')
+    const type = stanza.getAttribute('type')
+    const elems = stanza.getElementsByTagName('body')
+    console.log(from, type, elems)
+    return true
+  },
+  setLocalDescription: function (stream: MediaStream) {
+    this.peerConnection.onicecandidate = (event: any) => {
+      if (event.candidate === null) {
+        const localDescription = window.btoa(JSON.stringify(this.peerConnection.localDescription))
+        const message = $msg({to: 'admin_cs@prosolen.net', type: 'chat'}).c('body').t(localDescription)
+        this.conn.send(message)
+      }
+    }
+    stream.getTracks().forEach((track) => {
+      this.peerConnection.addTrack(track)
+    })
+    this.peerConnection.createOffer().then((offer: any) => this.peerConnection.setLocalDescription(offer))
+  }
 }
 
 export default glagolMeet
