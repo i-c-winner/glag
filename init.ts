@@ -8,15 +8,20 @@ let localStream: null | MediaStream = null
 
 const glagol = glagolMeet.init()
 glagolMeet.connection()
-mediaDevices.init()
-mediaDevices.on('localStreamInstaled', setLocalStream)
-function setLocalStream(...args: [MediaStream]) {
-  localStream = args[0]
-  setTimeout(()=>{
-    glagol.localStream=localStream
-    glagolMeet.setLocalDescription(localStream)
-  }, 2000)
+
+glagol.on('connected', connected)
+function connected(){
+  mediaDevices.init()
+
+  mediaDevices.on('localStreamInstaled', setLocalStream)
+  function setLocalStream(...args: [MediaStream]) {
+    localStream = args[0]
+      glagol.localStream=localStream
+      glagolMeet.setLocalDescription(localStream)
+  }
 }
+
+
 
 
 export default glagol
