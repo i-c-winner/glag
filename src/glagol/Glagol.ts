@@ -57,7 +57,6 @@ const glagolMeet = {
     const from = stanza.getAttribute('from')
     const type = stanza.getAttribute('type')
     const elems = stanza.getElementsByTagName('body')
-    console.log(type, elems[0])
     if (type === 'chat') {
       const message = Strophe.getText(elems[0])
       if (message === 'add_track') {
@@ -70,8 +69,9 @@ const glagolMeet = {
       } else {
         const rtcSd = new RTCSessionDescription((JSON.parse(window.atob(message))))
         try {
-          this.peerConnection.setRemoteDescription(rtcSd)
-          this.emit('addTrack', this.peerConnection.getRemoteStreams())
+          this.peerConnection.setRemoteDescription(rtcSd).then(() => {
+            this.emit('addTrack', this.peerConnection.getRemoteStreams())
+          })
         } catch (e) {
           console.error(e)
         }
@@ -80,6 +80,8 @@ const glagolMeet = {
     return true
   },
   setLocalDescription: function (stream: MediaStream) {
+    this.peerConnection.onaddstream = function (stream: any) {
+    }
     this.peerConnection.onicecandidate = (event: any) => {
       if (event.candidate === null) {
         const localDescription = window.btoa(JSON.stringify(this.peerConnection.localDescription))
@@ -99,12 +101,12 @@ const glagolMeet = {
   },
   on(event: string, callback: Function) {
     if (!this.listeners[event]) {
-      this.listeners[event]=[]
+      this.listeners[event] = []
     }
     this.listeners[event].push(callback)
   },
-  emit(emit: string, ...args:[...any[]]) {
-    this.listeners[emit].forEach((listener : Function) =>{
+  emit(emit: string, ...args: [...any[]]) {
+    this.listeners[emit].forEach((listener: Function) => {
       listener(args)
     })
   }
